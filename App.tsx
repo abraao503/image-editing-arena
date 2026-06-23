@@ -39,12 +39,7 @@ const App: React.FC = () => {
 
   // Default Selected Models
   const [selectedModels, setSelectedModels] = useState<string[]>([
-    "nano-banana-pro",
-    "nano-banana",
-    "flux-2-pro",
-    "seedream-4",
     "qwen-image-edit-plus",
-    "reve-edit",
   ]);
 
   // Results (starts empty)
