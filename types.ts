@@ -15,6 +15,8 @@ export interface ModelConfig {
   price: number;
   imageInputMode: ImageInputMode;
   maxImages: number; // Maximum number of input images accepted
+  supportsAspectRatio?: boolean; // Accepts aspect_ratio
+  supportsOutputFormat?: boolean; // Accepts output_format
   supportsSafetyChecker?: boolean; // Accepts disable_safety_checker
   supportsLora?: boolean; // Accepts lora_weights
 }

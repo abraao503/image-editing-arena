@@ -10,6 +10,8 @@ export const AVAILABLE_MODELS: ModelConfig[] = [
     price: 0.15,
     imageInputMode: "image_input",
     maxImages: 14,
+    supportsAspectRatio: true,
+    supportsOutputFormat: true,
   },
   {
     id: "nano-banana",
@@ -20,6 +22,8 @@ export const AVAILABLE_MODELS: ModelConfig[] = [
     price: 0.04,
     imageInputMode: "image_input",
     maxImages: 10,
+    supportsAspectRatio: true,
+    supportsOutputFormat: true,
   },
   {
     id: "flux-2-dev",
@@ -30,6 +34,8 @@ export const AVAILABLE_MODELS: ModelConfig[] = [
     price: 0.02,
     imageInputMode: "input_images",
     maxImages: 5,
+    supportsAspectRatio: true,
+    supportsOutputFormat: true,
     supportsSafetyChecker: true,
   },
   {
@@ -41,6 +47,8 @@ export const AVAILABLE_MODELS: ModelConfig[] = [
     price: 0.06,
     imageInputMode: "input_images",
     maxImages: 8,
+    supportsAspectRatio: true,
+    supportsOutputFormat: true,
   },
   {
     id: "flux-2-flex",
@@ -51,6 +59,8 @@ export const AVAILABLE_MODELS: ModelConfig[] = [
     price: 0.12,
     imageInputMode: "input_images",
     maxImages: 10,
+    supportsAspectRatio: true,
+    supportsOutputFormat: true,
   },
   {
     id: "seedream-4",
@@ -61,6 +71,7 @@ export const AVAILABLE_MODELS: ModelConfig[] = [
     price: 0.03,
     imageInputMode: "image_input",
     maxImages: 10,
+    supportsAspectRatio: true,
   },
   {
     id: "seededit-3.0",
@@ -73,6 +84,17 @@ export const AVAILABLE_MODELS: ModelConfig[] = [
     maxImages: 1,
   },
   {
+    id: "qwen-image-2",
+    owner: "qwen",
+    name: "qwen-image-2",
+    type: "image-editing",
+    description: "Qwen Image 2 - unified generation + editing",
+    price: 0.035,
+    imageInputMode: "image_string",
+    maxImages: 1,
+    supportsAspectRatio: true,
+  },
+  {
     id: "qwen-image-edit-plus",
     owner: "qwen",
     name: "qwen-image-edit-plus",
@@ -81,6 +103,8 @@ export const AVAILABLE_MODELS: ModelConfig[] = [
     price: 0.03,
     imageInputMode: "image_array",
     maxImages: 3,
+    supportsAspectRatio: true,
+    supportsOutputFormat: true,
     supportsSafetyChecker: true,
   },
   {
@@ -92,6 +116,8 @@ export const AVAILABLE_MODELS: ModelConfig[] = [
     price: 0.03,
     imageInputMode: "image_array",
     maxImages: 3,
+    supportsAspectRatio: true,
+    supportsOutputFormat: true,
     supportsSafetyChecker: true,
     supportsLora: true,
   },

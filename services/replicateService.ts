@@ -31,10 +31,13 @@ export const createPrediction = async (
 ): Promise<Prediction> => {
   const payloadInput: any = {
     prompt: input.prompt,
-    output_format: "png",
   };
 
-  if (input.aspect_ratio) {
+  if (model.supportsOutputFormat) {
+    payloadInput.output_format = "png";
+  }
+
+  if (model.supportsAspectRatio && input.aspect_ratio) {
     payloadInput.aspect_ratio = input.aspect_ratio;
   }
 

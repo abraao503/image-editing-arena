@@ -39,6 +39,7 @@ const App: React.FC = () => {
 
   // Default Selected Models
   const [selectedModels, setSelectedModels] = useState<string[]>([
+    "qwen-image-2",
     "qwen-image-edit-plus",
   ]);
 
