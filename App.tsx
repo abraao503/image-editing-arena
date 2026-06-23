@@ -19,6 +19,49 @@ import {
   Menu,
 } from "lucide-react";
 
+// Max dimension (px) for uploaded images. Large images are downscaled before
+// being sent so the base64 payload stays small. Some upstream providers (e.g.
+// the Alibaba/DashScope service behind qwen-image-2) reject very large or
+// unusual-format images with a 400, so we normalize everything to JPEG here.
+const MAX_IMAGE_DIMENSION = 2048;
+
+const resizeImageToDataUrl = (file: File): Promise<string> =>
+  new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error("Failed to read file"));
+    reader.onload = () => {
+      const dataUrl = reader.result as string;
+      const img = new Image();
+      img.onerror = () => reject(new Error("Failed to load image"));
+      img.onload = () => {
+        let { width, height } = img;
+        const scale = Math.min(
+          1,
+          MAX_IMAGE_DIMENSION / Math.max(width, height),
+        );
+        width = Math.max(1, Math.round(width * scale));
+        height = Math.max(1, Math.round(height * scale));
+
+        const canvas = document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) {
+          // Canvas unavailable: fall back to the original data URL
+          resolve(dataUrl);
+          return;
+        }
+        // White background so transparent PNGs don't turn black in JPEG
+        ctx.fillStyle = "#ffffff";
+        ctx.fillRect(0, 0, width, height);
+        ctx.drawImage(img, 0, 0, width, height);
+        resolve(canvas.toDataURL("image/jpeg", 0.92));
+      };
+      img.src = dataUrl;
+    };
+    reader.readAsDataURL(file);
+  });
+
 const App: React.FC = () => {
   // Initialize API key from localStorage if available
   const [apiKey, setApiKey] = useState<string>(() => {
@@ -36,6 +79,9 @@ const App: React.FC = () => {
 
   // Optional LoRA weights (HF repo slug or .safetensors URL) for Qwen LoRA model
   const [loraWeights, setLoraWeights] = useState<string>("");
+
+  // Output aspect ratio. "match_input_image" = Auto (match the input image)
+  const [aspectRatio, setAspectRatio] = useState<string>("match_input_image");
 
   // Default Selected Models
   const [selectedModels, setSelectedModels] = useState<string[]>([
@@ -107,21 +153,22 @@ const App: React.FC = () => {
     e.target.value = "";
   };
 
-  const processImageFiles = (files: File[]) => {
+  const processImageFiles = async (files: File[]) => {
     const imageFiles = files.filter((f) => f.type.startsWith("image/"));
     if (imageFiles.length === 0) {
       alert("Please upload an image file");
       return;
     }
 
-    imageFiles.forEach((file) => {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setInputImages((prev) => [...prev, reader.result as string]);
+    for (const file of imageFiles) {
+      try {
+        const dataUrl = await resizeImageToDataUrl(file);
+        setInputImages((prev) => [...prev, dataUrl]);
         setValidationError(null); // Clear error on upload
-      };
-      reader.readAsDataURL(file);
-    });
+      } catch {
+        alert("Could not process one of the images. Please try another file.");
+      }
+    }
   };
 
   const removeImage = (index: number) => {
@@ -218,7 +265,7 @@ const App: React.FC = () => {
         const prediction = await createPrediction(apiKey, model, {
           prompt,
           images: inputImages,
-          aspect_ratio: "4:3",
+          aspect_ratio: aspectRatio,
           loraWeights,
         });
 
@@ -602,7 +649,28 @@ const App: React.FC = () => {
             />
           </div>
 
-          {/* 2b. LORA WEIGHTS - applies to Qwen LoRA model */}
+          {/* 2b. ASPECT RATIO */}
+          <div className="bg-white dark:bg-[#0f0f0f] border-b border-gray-100 dark:border-[#222] shrink-0 px-5 py-4">
+            <label className="block text-[10px] font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-2">
+              Aspect Ratio
+            </label>
+            <select
+              value={aspectRatio}
+              onChange={(e) => setAspectRatio(e.target.value)}
+              className="w-full bg-gray-50 dark:bg-[#1a1a1a] border border-gray-100 dark:border-[#333] rounded px-3 py-2 text-xs text-gray-900 dark:text-gray-100 outline-none focus:border-gray-300 dark:focus:border-[#555] transition-colors cursor-pointer"
+            >
+              <option value="match_input_image">Auto (match input)</option>
+              <option value="1:1">1:1 (Square)</option>
+              <option value="4:3">4:3 (Landscape)</option>
+              <option value="3:4">3:4 (Portrait)</option>
+              <option value="16:9">16:9 (Wide)</option>
+              <option value="9:16">9:16 (Tall)</option>
+              <option value="3:2">3:2</option>
+              <option value="2:3">2:3</option>
+            </select>
+          </div>
+
+          {/* 2c. LORA WEIGHTS - applies to Qwen LoRA model */}
           <div className="bg-white dark:bg-[#0f0f0f] border-b border-gray-100 dark:border-[#222] shrink-0 px-5 py-4">
             <label className="block text-[10px] font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-2">
               LoRA Weights{" "}

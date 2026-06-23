@@ -16,6 +16,7 @@ export interface ModelConfig {
   imageInputMode: ImageInputMode;
   maxImages: number; // Maximum number of input images accepted
   supportsAspectRatio?: boolean; // Accepts aspect_ratio
+  matchInputViaBoolean?: boolean; // "match input" is a separate boolean (match_input_image) instead of aspect_ratio="match_input_image"
   supportsOutputFormat?: boolean; // Accepts output_format
   supportsSafetyChecker?: boolean; // Accepts disable_safety_checker
   supportsLora?: boolean; // Accepts lora_weights

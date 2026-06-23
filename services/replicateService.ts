@@ -38,7 +38,17 @@ export const createPrediction = async (
   }
 
   if (model.supportsAspectRatio && input.aspect_ratio) {
-    payloadInput.aspect_ratio = input.aspect_ratio;
+    if (input.aspect_ratio === "match_input_image") {
+      // "Auto": match the input image's aspect ratio. Most models accept the
+      // string value; qwen-image-2 uses a dedicated boolean instead.
+      if (model.matchInputViaBoolean) {
+        payloadInput.match_input_image = true;
+      } else {
+        payloadInput.aspect_ratio = "match_input_image";
+      }
+    } else {
+      payloadInput.aspect_ratio = input.aspect_ratio;
+    }
   }
 
   // Map input images according to each model's expected param/shape,

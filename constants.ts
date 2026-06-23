@@ -93,6 +93,7 @@ export const AVAILABLE_MODELS: ModelConfig[] = [
     imageInputMode: "image_string",
     maxImages: 1,
     supportsAspectRatio: true,
+    matchInputViaBoolean: true,
   },
   {
     id: "qwen-image-edit-plus",
