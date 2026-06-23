@@ -1,4 +1,4 @@
-import { ModelConfig } from '../types';
+import { ModelConfig } from "../types";
 
 const SLEEP_MS = 1500; // Poll interval
 
@@ -6,7 +6,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 // Use our own Cloudflare Worker as a proxy to avoid CORS issues
 // The worker proxies requests to the Replicate API server-side
-const API_BASE = '/api/replicate';
+const API_BASE = "/api/replicate";
 
 interface Prediction {
   id: string;
@@ -22,39 +22,51 @@ interface Prediction {
 export const createPrediction = async (
   apiKey: string,
   model: ModelConfig,
-  input: { prompt: string; image?: string; aspect_ratio?: string }
+  input: {
+    prompt: string;
+    images?: string[];
+    aspect_ratio?: string;
+    loraWeights?: string;
+  },
 ): Promise<Prediction> => {
   const payloadInput: any = {
     prompt: input.prompt,
-    output_format: 'png',
+    output_format: "png",
   };
 
   if (input.aspect_ratio) {
     payloadInput.aspect_ratio = input.aspect_ratio;
   }
 
-  // Handle Input Image mapping based on model specific requirements
-  if (input.image) {
-    // 1. Flux models (black-forest-labs) accept "input_images" as a list
-    if (model.owner === 'black-forest-labs') {
-      payloadInput.input_images = [input.image];
+  // Map input images according to each model's expected param/shape,
+  // capped at the maximum the model accepts.
+  const images = (input.images || []).filter(Boolean);
+  if (images.length > 0) {
+    const limited = images.slice(0, model.maxImages);
+    switch (model.imageInputMode) {
+      case "image_input":
+        payloadInput.image_input = limited;
+        break;
+      case "input_images":
+        payloadInput.input_images = limited;
+        break;
+      case "image_array":
+        payloadInput.image = limited;
+        break;
+      case "image_string":
+        payloadInput.image = limited[0];
+        break;
     }
-    // 2. Models that accept "image" as a string
-    else if (
-      (model.owner === 'reve' && (model.name === 'edit' || model.name === 'edit-fast')) ||
-      (model.owner === 'qwen' && model.name === 'qwen-image-edit') ||
-      (model.owner === 'bytedance' && model.name === 'seededit-3.0')
-    ) {
-      payloadInput.image = input.image;
-    } 
-    // 3. Models that accept "image" as a list
-    else if (model.owner === 'qwen' && model.name === 'qwen-image-edit-plus') {
-      payloadInput.image = [input.image];
-    } 
-    // 4. All others accept "image_input" as a list param
-    else {
-      payloadInput.image_input = [input.image];
-    }
+  }
+
+  // Disable the safety checker on models that support that exact param.
+  if (model.supportsSafetyChecker) {
+    payloadInput.disable_safety_checker = true;
+  }
+
+  // Apply LoRA weights only to models that support it (Qwen LoRA explorer).
+  if (model.supportsLora && input.loraWeights && input.loraWeights.trim()) {
+    payloadInput.lora_weights = input.loraWeights.trim();
   }
 
   // Use our worker proxy endpoint
@@ -62,10 +74,10 @@ export const createPrediction = async (
 
   try {
     const response = await fetch(url, {
-      method: 'POST',
+      method: "POST",
       headers: {
-        'Authorization': `Token ${apiKey}`,
-        'Content-Type': 'application/json',
+        Authorization: `Token ${apiKey}`,
+        "Content-Type": "application/json",
       },
       body: JSON.stringify({ input: payloadInput }),
     });
@@ -73,7 +85,9 @@ export const createPrediction = async (
     if (!response.ok) {
       const errorBody = await response.text();
       if (response.status === 404) {
-        throw new Error(`Model not found (${model.owner}/${model.name}). Check model ID.`);
+        throw new Error(
+          `Model not found (${model.owner}/${model.name}). Check model ID.`,
+        );
       }
       if (response.status === 401) {
         throw new Error("Invalid API Key.");
@@ -87,26 +101,34 @@ export const createPrediction = async (
     const prediction = await response.json();
     return prediction;
   } catch (err: any) {
-    if (err.message === 'Failed to fetch') {
-      throw new Error("Network error. Please check your connection and try again.");
+    if (err.message === "Failed to fetch") {
+      throw new Error(
+        "Network error. Please check your connection and try again.",
+      );
     }
     throw err;
   }
 };
 
-export const pollPrediction = async (apiKey: string, predictionUrl: string): Promise<Prediction> => {
+export const pollPrediction = async (
+  apiKey: string,
+  predictionUrl: string,
+): Promise<Prediction> => {
   // Convert the full Replicate URL to use our worker proxy
   // predictionUrl is like: https://api.replicate.com/v1/predictions/xxx
-  const proxyPath = predictionUrl.replace('https://api.replicate.com', API_BASE);
+  const proxyPath = predictionUrl.replace(
+    "https://api.replicate.com",
+    API_BASE,
+  );
 
   while (true) {
     const response = await fetch(proxyPath, {
       headers: {
-        'Authorization': `Token ${apiKey}`,
-        'Content-Type': 'application/json',
+        Authorization: `Token ${apiKey}`,
+        "Content-Type": "application/json",
       },
     });
-    
+
     if (!response.ok) {
       if (response.status === 429) {
         await sleep(SLEEP_MS * 2);
@@ -117,10 +139,15 @@ export const pollPrediction = async (apiKey: string, predictionUrl: string): Pro
 
     const prediction = await response.json();
 
-    if (prediction.status === 'succeeded') {
+    if (prediction.status === "succeeded") {
       return prediction;
-    } else if (prediction.status === 'failed' || prediction.status === 'canceled') {
-      throw new Error(`Prediction ${prediction.status}: ${prediction.error || 'Unknown error'}`);
+    } else if (
+      prediction.status === "failed" ||
+      prediction.status === "canceled"
+    ) {
+      throw new Error(
+        `Prediction ${prediction.status}: ${prediction.error || "Unknown error"}`,
+      );
     }
 
     await sleep(SLEEP_MS);
